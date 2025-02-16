@@ -8,6 +8,26 @@
       </template>
       
       <el-form :model="form" label-width="80px">
+        <el-form-item label="API Key">
+          <el-input
+            v-model="form.apiKey"
+            placeholder="请输入DeepSeek API Key"
+            show-password
+            @change="handleApiKeyChange"
+          />
+        </el-form-item>
+
+        <el-form-item label="模型">
+          <el-select v-model="form.model" placeholder="请选择模型">
+            <el-option
+              v-for="(desc, key) in DeepSeekService.MODELS"
+              :key="key"
+              :label="desc"
+              :value="key"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="简历">
           <div class="resume-upload">
             <el-upload
@@ -58,6 +78,8 @@ import { ElMessage } from 'element-plus'
 import DeepSeekService from '../services/deepseek'
 
 const form = ref({
+  apiKey: '',
+  model: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B',
   resume: null,
   resumeFileName: '',
   jobRequirements: ''
@@ -67,10 +89,25 @@ const loading = ref(false)
 const suggestion = ref('')
 const deepseekService = ref(null)
 
+const handleApiKeyChange = async (value) => {
+  try {
+    await chrome.storage.sync.set({ apiKey: value })
+    deepseekService.value = new DeepSeekService(value, form.value.model)
+    ElMessage.success('API Key已保存')
+  } catch (error) {
+    console.error('保存API Key失败：', error)
+    ElMessage.error('保存API Key失败')
+  }
+}
+
 onMounted(async () => {
-  const result = await chrome.storage.sync.get(['apiKey', 'savedResumeFileName', 'lastSuggestion'])
+  const result = await chrome.storage.sync.get(['apiKey', 'savedResumeFileName', 'lastSuggestion', 'selectedModel'])
   if (result.apiKey) {
-    deepseekService.value = new DeepSeekService(result.apiKey)
+    form.value.apiKey = result.apiKey
+    deepseekService.value = new DeepSeekService(result.apiKey, result.selectedModel || form.value.model)
+  }
+  if (result.selectedModel) {
+    form.value.model = result.selectedModel
   }
   if (result.lastSuggestion) {
     suggestion.value = result.lastSuggestion
@@ -103,14 +140,11 @@ onMounted(async () => {
 const handleResumeChange = async (file) => {
   form.value.resume = file.raw
   form.value.resumeFileName = file.raw.name
-  
   const reader = new FileReader()
   reader.onload = async (e) => {
     try {
-      // 使用localStorage存储简历数据
       localStorage.setItem('savedResume', e.target.result)
       localStorage.setItem('savedResumeFileName', file.raw.name)
-      // 仅在sync storage中存储文件名
       await chrome.storage.sync.set({
         savedResumeFileName: file.raw.name
       })
@@ -133,19 +167,32 @@ const clearResume = async () => {
   }
 }
 
+const handleModelChange = async (value) => {
+  try {
+    await chrome.storage.sync.set({ selectedModel: value })
+    if (deepseekService.value) {
+      deepseekService.value = new DeepSeekService(form.value.apiKey, value)
+    }
+  } catch (error) {
+    console.error('保存模型选择失败：', error)
+    ElMessage.error('保存模型选择失败')
+  }
+}
+
 const generateSuggestion = async () => {
+  if (!form.value.apiKey) {
+    ElMessage.warning('请先输入DeepSeek API Key')
+    return
+  }
   if (!form.value.resume || !form.value.jobRequirements) {
     ElMessage.warning('请上传简历并填写职位要求')
     return
   }
-  const result = await chrome.storage.sync.get(['apiKey'])
-  if (!result.apiKey) {
-    ElMessage.warning('请先在插件设置中配置DeepSeek API Key')
-    return
+
+  if (!deepseekService.value || deepseekService.value.apiKey !== form.value.apiKey || deepseekService.value.model !== form.value.model) {
+    deepseekService.value = new DeepSeekService(form.value.apiKey, form.value.model)
   }
-  if (!deepseekService.value || deepseekService.value.apiKey !== result.apiKey) {
-    deepseekService.value = new DeepSeekService(result.apiKey)
-  }
+
   loading.value = true
   try {
     const reader = new FileReader()
@@ -156,7 +203,6 @@ const generateSuggestion = async () => {
           resumeContent,
           form.value.jobRequirements
         )
-        // 保存建议到本地存储
         await chrome.storage.sync.set({
           lastSuggestion: suggestion.value
         })
@@ -183,8 +229,7 @@ const generateSuggestion = async () => {
 <style scoped>
 .popup-container {
   width: 600px;
-  padding: 16px;
-  min-height: 400px;
+  padding: 20px;
 }
 
 .card-header {
@@ -194,51 +239,39 @@ const generateSuggestion = async () => {
 }
 
 .resume-upload {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  width: 100%;
 }
 
 .resume-info {
+  margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .resume-name {
-  color: #606266;
-  font-size: 14px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .suggestion-container {
   margin-top: 20px;
-  padding: 16px;
+  padding: 15px;
   background-color: #f5f7fa;
   border-radius: 4px;
 }
 
 .suggestion-container h3 {
   margin-top: 0;
-  margin-bottom: 16px;
-  color: #409eff;
+  margin-bottom: 10px;
+  color: #303133;
 }
 
 .suggestion-container p {
   margin: 0;
-  line-height: 1.6;
   white-space: pre-wrap;
-}
-
-.suggestion-container {
-  margin-top: 16px;
-  padding: 16px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-}
-
-.suggestion-container h3 {
-  margin-top: 0;
-  margin-bottom: 8px;
-  color: #409eff;
+  color: #606266;
 }
 </style>

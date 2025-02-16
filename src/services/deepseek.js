@@ -17,11 +17,40 @@ class DeepSeekService {
 
   static getJobDescription() {
     // 获取职位描述
-    const jobDescriptionElement = document.querySelector('.job-detail .job-sec-text')
-    if (jobDescriptionElement) {
-      return jobDescriptionElement.textContent.trim()
+    // 定义可能包含职位描述的选择器列表
+    const selectors = [
+      '.job-detail-section .job-sec-text',  // 新版本选择器
+      '.job-detail .job-sec-text',          // 原有选择器
+      '.job-detail .detail-content',         // 备用选择器
+      '.job-detail .job-description',        // 常见的职位描述类名
+      '.detail-content .text',               // 简化版选择器
+      '[data-name="jobDetail"]',             // 使用data属性的选择器
+      '.detail-content',                     // 通用详情内容选择器
+      '.job-detail',                         // 基础职位详情选择器
+      '.job-sec-text',                       // 基础文本选择器
+      '.job-description-content'             // 新版本可能的选择器
+    ]
+
+    try {
+      // 遍历所有选择器，尝试获取职位描述
+      for (const selector of selectors) {
+        const element = document.querySelector(selector)
+        if (element) {
+          const text = element.textContent.trim()
+          if (text) {
+            console.log('成功获取职位描述，使用选择器：', selector)
+            return text
+          }
+        }
+      }
+
+      // 如果所有选择器都失败，返回空字符串
+      console.warn('无法找到职位描述元素，已尝试的选择器：', selectors.join(', '))
+      return ''
+    } catch (error) {
+      console.error('获取职位描述时发生错误：', error, '\n已尝试的选择器：', selectors.join(', '))
+      return ''
     }
-    return ''
   }
 
   constructor(apiKey, model = 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B') {

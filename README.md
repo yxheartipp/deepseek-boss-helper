@@ -45,12 +45,36 @@ npm run build
    - 点击Chrome工具栏中的扩展图标
    - 点击「设置」进入选项页面
    - 输入你的DeepSeek API Key并保存
+   - 选择合适的模型（可选）
 
 3. 使用扩展：
    - 在Boss直聘上浏览职位时，点击扩展图标
    - 上传你的简历（支持PDF格式）
    - 职位描述会自动获取，你也可以手动修改
    - 点击「生成建议」获取分析结果
+
+## 支持的模型
+
+本扩展支持以下DeepSeek模型：
+
+### 基础模型
+- DeepSeek-R1 基础模型
+- DeepSeek-R1 Pro基础模型
+
+### Llama系列
+- DeepSeek-R1-Distill-Llama-70B
+- DeepSeek-R1-Distill-Llama-8B
+- Pro DeepSeek-R1-Distill-Llama-8B
+
+### Qwen系列
+- DeepSeek-R1-Distill-Qwen-32B
+- DeepSeek-R1-Distill-Qwen-14B
+- DeepSeek-R1-Distill-Qwen-7B
+- DeepSeek-R1-Distill-Qwen-1.5B
+- Pro DeepSeek-R1-Distill-Qwen-7B
+- Pro DeepSeek-R1-Distill-Qwen-1.5B
+
+默认使用DeepSeek-R1-Distill-Qwen-1.5B模型，您可以根据需要选择其他模型。较大的模型通常能提供更好的分析质量，但响应时间可能会更长。
 
 ## 注意事项
 
